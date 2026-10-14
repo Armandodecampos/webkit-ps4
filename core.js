@@ -325,18 +325,19 @@ function giveUp(reason) {
 }
 
 function failed() {
-    if (ceilingReached()) {
-        giveUp("attempt-ceiling");
-        return;
+    stopped = true;
+    emit("CORE-FAILED", `attempt=${attemptNumber}`);
+    const stateEl = document.getElementById("state");
+    if (stateEl) {
+        stateEl.textContent = "Ocorreu um erro no desbloqueio. Por favor, desligue o PS4 e ligue novamente para tentar de novo.";
+        stateEl.className = "bad";
     }
-    emit("AUTO-RETRY-AFTER-FAILURE", `attempt=${attemptNumber}`);
-    stopped = false;
-    retryScheduled = false;
-    setTimeout(() => {
-        try { history.replaceState(null, ""); } catch { }
-        attemptNumber++;
-        startAttempt();
-    }, AUTO_RETRY_DELAY_MS);
+    const reject = settleReject;
+    settleResolve = null;
+    settleReject = null;
+    running = false;
+    if (reject !== null)
+        reject(new Error("Ocorreu um erro no desbloqueio. Por favor, desligue o PS4 e ligue novamente para tentar de novo."));
 }
 
 function releaseAttemptAllocations() {
@@ -371,47 +372,7 @@ function releaseAttemptAllocations() {
 }
 
 function scheduleSafeRetry(reason) {
-    if (retryScheduled || stopped)
-        return;
-    const candidateStateSafe = !candidateEverReturned
-        || (zeroHeaderMiss && !candidateMutationStarted);
-
-    if (!retrySafe || !candidateStateSafe
-        || candidateMutationStarted || !attemptPersisted) {
-        emit("AUTO-RETRY-NOT-SCHEDULED", `reason=${reason}`
-            + `-safe=${retrySafe}`
-            + `-candidate-seen=${candidateEverReturned}`
-            + `-candidate-mutated=${candidateMutationStarted}`
-            + `-candidate-state-safe=${candidateStateSafe}`
-            + `-attempt-persisted=${attemptPersisted}`);
-        failed();
-        return;
-    }
-    if (ceilingReached()) {
-        giveUp("attempt-ceiling");
-        return;
-    }
-
-    retryScheduled = true;
-    const nextAttempt = attemptNumber + 1;
-    emit("AUTO-RETRY-SCHEDULED", `reason=${reason}-next-attempt=${nextAttempt}`);
-    releaseAttemptAllocations();
-    setTimeout(() => {
-        const candidateStillSafe = !candidateEverReturned
-            || (zeroHeaderMiss && !candidateMutationStarted);
-        if (!retrySafe || !candidateStillSafe
-            || candidateMutationStarted || stopped) {
-            emit("AUTO-RETRY-CANCELLED", `reason=${reason}`
-                + `-retry-safe=${retrySafe}`
-                + `-candidate-safe=${candidateStillSafe}`
-                + `-candidate-mutated=${candidateMutationStarted}`);
-            failed();
-            return;
-        }
-
-        attemptNumber = nextAttempt;
-        startAttempt();
-    }, Math.max(AUTO_RETRY_DELAY_MS, 750));
+    failed();
 }
 
 function finishEarlySafeAttempt(tag, extra, reason) {

