@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ps4 jailbreak</title>
+<title>desbloqueio ps4</title>
 <style>
   html, body { margin:0; padding:0; background:#0b0d10; color:#c8ced8;
                font:15px/1.45 "Segoe UI", system-ui, sans-serif; }
@@ -25,7 +25,7 @@
 <body>
 <div id="brand"><img src="logo_raw.png" alt="" width="28" height="28"><b>RAW GAME</b></div>
 <div id="wrap">
-  <div id="state">detecting firmware...</div>
+  <div id="state">detectando firmware...</div>
   <div id="det"></div>
   <div id="cache"></div>
 </div>
@@ -51,24 +51,24 @@
     var bug = null, why = "";
     var forced = params.get("bug");
     if (forced === "lapse" || forced === "poops") {
-        bug = forced; why = "forced via ?bug=" + forced;
+        bug = forced; why = "forçado via ?bug=" + forced;
     } else if (!key) {
-        why = "user-agent is not a PlayStation 4";
+        why = "User-Agent não é um PlayStation 4";
     } else if (fwnum <= 1202) {
         bug = "lapse"; why = key + " <= 12.02";
     } else if (fwnum >= 1250) {
         bug = "poops"; why = key + " >= 12.50";
     } else {
-        why = key + " -- no working bug (lapse ends at 12.02, poops needs 12.50)";
+        why = key + " -- sem bug compatível (lapse vai até 12.02, poops requer 12.50)";
     }
-    detEl.innerHTML = "firmware <b>" + (key || "unknown") + "</b>"
-        + " &middot; bug <b>" + (bug || "none") + "</b> &middot; " + why;
+    detEl.innerHTML = "firmware <b>" + (key || "desconhecido") + "</b>"
+        + " &middot; bug <b>" + (bug || "nenhum") + "</b> &middot; " + why;
 
-    if (!bug) { setState("UNSUPPORTED FIRMWARE", "bad"); return; }
+    if (!bug) { setState("FIRMWARE NÃO SUPORTADO", "bad"); return; }
 
     var target = (bug === "lapse" ? "run_lapse.html" : "run_poops.html")
         + location.search;
-    function go() { setState("loading " + bug + " chain...", "warn");
+    function go() { setState("carregando a cadeia " + bug + "...", "warn");
                     location.replace(target); }
 
     function waitForTap(msg, action) {
@@ -86,47 +86,47 @@
     if (!ac || !document.documentElement.hasAttribute("manifest")) {
         go();
     } else if (!navigator.onLine) {
-        setCache("offline -- from cache", true);
+        setCache("offline -- a partir do cache", true);
         go();
     } else if (ac.status === ac.IDLE) {
-        setCache("cached", true);
+        setCache("em cache", true);
         go();
     } else if (ac.status === ac.UPDATEREADY) {
         try { ac.swapCache(); } catch (e) {}
-        setCache("update downloaded", true);
-        waitForTap("UPDATE READY -- press X or tap to reload & run",
+        setCache("atualização baixada", true);
+        waitForTap("ATUALIZAÇÃO PRONTA -- pressione X ou toque para recarregar e executar",
                    function () { location.reload(); });
     } else {
-        setCache("checking cache...");
+        setCache("verificando cache...");
         ac.addEventListener("downloading",
-            function () { setCache("caching for offline (first run)..."); }, false);
+            function () { setCache("armazenando em cache para uso offline (primeira execução)..."); }, false);
         ac.addEventListener("progress", function (e) {
             if (e && e.total)
-                setCache("caching " + Math.round((e.loaded / e.total) * 100) + "%");
+                setCache("armazenando em cache " + Math.round((e.loaded / e.total) * 100) + "%");
         }, false);
 
         ac.addEventListener("cached", function () {
-            setCache("cached for offline use", true);
-            waitForTap("CACHED (first run) -- press X or tap to run", go);
+            setCache("armazenado em cache para uso offline", true);
+            waitForTap("ARMAZENADO EM CACHE (primeira execução) -- pressione X ou toque para executar", go);
         }, false);
         ac.addEventListener("updateready", function () {
             try { ac.swapCache(); } catch (e) {}
-            setCache("update downloaded", true);
-            waitForTap("UPDATE READY -- press X or tap to reload & run",
+            setCache("atualização baixada", true);
+            waitForTap("ATUALIZAÇÃO PRONTA -- pressione X ou toque para recarregar e executar",
                        function () { location.reload(); });
         }, false);
 
         ac.addEventListener("noupdate", function () {
-            setCache("cached -- offline ready", true);
+            setCache("em cache -- pronto para uso offline", true);
             go();
         }, false);
         ac.addEventListener("error", function () {
-            setCache("cache unavailable");
-            waitForTap("CACHE FAILED -- press X or tap to run anyway", go);
+            setCache("cache indisponível");
+            waitForTap("FALHA NO CACHE -- pressione X ou toque para executar mesmo assim", go);
         }, false);
         ac.addEventListener("obsolete", function () {
-            setCache("cache obsolete");
-            waitForTap("CACHE OBSOLETE -- press X or tap to run", go);
+            setCache("cache obsoleto");
+            waitForTap("CACHE OBSOLETO -- pressione X ou toque para executar", go);
         }, false);
     }
 })();
